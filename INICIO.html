@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Empacadora Superior — Centro de Operaciones</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #0f172a;
+    min-height: 100vh;
+    color: #f1f5f9;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%);
+    padding: 28px 48px 24px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+  }
+  .logo-icon {
+    width: 52px; height: 52px;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(34,197,94,0.3);
+  }
+  .header-text h1 {
+    font-size: 26px; font-weight: 800; letter-spacing: -0.3px;
+    color: #fff;
+  }
+  .header-text p {
+    font-size: 13px; color: #94a3b8; margin-top: 2px; letter-spacing: 0.3px;
+  }
+  .header-date {
+    margin-left: auto;
+    font-size: 13px; color: #64748b; text-align: right; line-height: 1.6;
+  }
+
+  /* ── MAIN ── */
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 48px 24px 64px;
+  }
+
+  .welcome-box {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 28px 36px;
+    margin-bottom: 48px;
+    backdrop-filter: blur(8px);
+  }
+  .welcome-box h2 {
+    font-size: 18px; font-weight: 700; color: #e2e8f0; margin-bottom: 6px;
+  }
+  .welcome-box p { font-size: 13px; color: #64748b; }
+
+  /* ── SECTION TITLE ── */
+  .section-title {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+    color: #475569; text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  .section-title::before {
+    content: '';
+    display: inline-block; width: 20px; height: 3px;
+    background: linear-gradient(90deg, #22c55e, #3b82f6);
+    border-radius: 2px;
+  }
+
+  /* ── CARDS GRID ── */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 20px;
+  }
+  @media(max-width: 500px){ .cards-grid{ grid-template-columns: 1fr; } }
+
+  /* ── CARD ── */
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 32px 24px 24px;
+    text-decoration: none;
+    color: inherit;
+    display: flex; flex-direction: column;
+    position: relative; overflow: hidden;
+    border-top: 4px solid transparent;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    cursor: pointer;
+  }
+  .card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.25);
+  }
+  .card:active { transform: translateY(-2px); }
+
+  /* Color accent per card */
+  .card-ventas    { border-top-color: #22c55e; }
+  .card-pedidos   { border-top-color: #1e3a5f; }
+  .card-inventario{ border-top-color: #f97316; }
+  .card-rotulos   { border-top-color: #8b5cf6; }
+  .card-gasolina  { border-top-color: #f59e0b; }
+
+  .card-icon {
+    width: 56px; height: 56px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; margin-bottom: 18px;
+    flex-shrink: 0;
+  }
+  .card-ventas     .card-icon { background: #f0fdf4; }
+  .card-pedidos    .card-icon { background: #f0f4ff; }
+  .card-inventario .card-icon { background: #fff7ed; }
+  .card-rotulos    .card-icon { background: #faf5ff; }
+  .card-gasolina   .card-icon { background: #fffbeb; }
+
+  .card-title {
+    font-size: 18px; font-weight: 800; color: #1e293b;
+    margin-bottom: 10px; line-height: 1.2;
+  }
+  .card-ventas     .card-title { color: #15803d; }
+  .card-pedidos    .card-title { color: #1e3a5f; }
+  .card-inventario .card-title { color: #c2410c; }
+  .card-rotulos    .card-title { color: #7c3aed; }
+  .card-gasolina   .card-title { color: #b45309; }
+
+  .card-desc {
+    font-size: 12px; color: #64748b; line-height: 1.6;
+    flex: 1; margin-bottom: 20px;
+  }
+
+  .card-badge {
+    display: inline-block;
+    padding: 5px 14px;
+    border-radius: 999px;
+    font-size: 10px; font-weight: 800; letter-spacing: 1px;
+    text-transform: uppercase;
+    align-self: flex-start;
+  }
+  .card-ventas     .card-badge { background:#dcfce7; color:#15803d; }
+  .card-pedidos    .card-badge { background:#1e3a5f; color:#fff; }
+  .card-inventario .card-badge { background:#ffedd5; color:#c2410c; }
+  .card-rotulos    .card-badge { background:#ede9fe; color:#7c3aed; }
+  .card-gasolina   .card-badge { background:#fef3c7; color:#92400e; }
+
+  /* Glow on hover per card */
+  .card-ventas:hover     { box-shadow: 0 16px 40px rgba(34,197,94,0.18); }
+  .card-pedidos:hover    { box-shadow: 0 16px 40px rgba(30,58,95,0.2); }
+  .card-inventario:hover { box-shadow: 0 16px 40px rgba(249,115,22,0.18); }
+  .card-rotulos:hover    { box-shadow: 0 16px 40px rgba(139,92,246,0.2); }
+  .card-gasolina:hover   { box-shadow: 0 16px 40px rgba(245,158,11,0.2); }
+
+  /* Arrow indicator */
+  .card::after {
+    content: '→';
+    position: absolute; top: 20px; right: 20px;
+    font-size: 16px; color: #cbd5e1;
+    transition: transform 0.18s ease, color 0.18s ease;
+  }
+  .card:hover::after { transform: translateX(4px); color: #94a3b8; }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    padding: 24px;
+    font-size: 11px; color: #334155;
+    border-top: 1px solid rgba(255,255,255,0.05);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-icon">🏭</div>
+  <div class="header-text">
+    <h1>Empacadora Superior</h1>
+    <p>Centro de Operaciones &middot; Ventas &middot; Pedidos &middot; Inventarios &middot; Rótulos</p>
+  </div>
+  <div class="header-date" id="hdr-fecha"></div>
+</header>
+
+<main>
+  <div class="welcome-box">
+    <h2>Selecciona un módulo</h2>
+    <p>Cada tarjeta abre una pantalla enfocada con filtros y reportes propios.</p>
+  </div>
+
+  <div class="section-title">Dashboards ejecutivos</div>
+
+  <div class="cards-grid">
+
+    <!-- ══ VENTAS ══
+         👉 CAMBIAR: reemplaza el href con la URL o archivo de tu módulo de Ventas -->
+    <a class="card card-ventas" href="CENTRO_OPERACIONES_ERP_v9.html" target="_blank">
+      <div class="card-icon">🛒</div>
+      <div class="card-title">Ventas</div>
+      <div class="card-desc">
+        KPIs · % Margen · Top vendedores/clientes/productos · Evolución mensual · Comparativa por año
+      </div>
+      <span class="card-badge">Director General</span>
+    </a>
+
+    <!-- ══ PEDIDOS SUGERIDOS ══
+         👉 CAMBIAR: reemplaza el href con la URL o archivo de tu módulo de Pedidos -->
+    <a class="card card-pedidos" href="https://script.google.com/macros/s/AKfycbyYenXQxjGlh62ZvTy3V0CyJS6BMPTIw-PmPGBykpNOTq-_Cq6chp6qcdRrtTj0OQCu/exec" target="_blank">
+      <div class="card-icon">📋</div>
+      <div class="card-title">Pedidos sugeridos</div>
+      <div class="card-desc">
+        Críticos · OK · Exceso · Inv antiguo · Por sucursal · Días de antigüedad
+      </div>
+      <span class="card-badge">Compras</span>
+    </a>
+
+    <!-- ══ INVENTARIOS ══
+         👉 CAMBIAR: reemplaza el href con la URL o archivo de tu módulo de Inventarios -->
+    <a class="card card-inventario" href="https://script.google.com/macros/s/AKfycbxo1bL1DgH-xwMb3ADnqDRiIEGa1tkNf16wMZF5dahLkU7_a4Vf_67UzQxLDkuVl65J8Q/exec" target="_blank">
+      <div class="card-icon">📦</div>
+      <div class="card-title">Inventarios</div>
+      <div class="card-desc">
+        Físico vs sistema · Faltante/Sobrante kg y $ · Cerrar inventario
+      </div>
+      <span class="card-badge">Operaciones</span>
+    </a>
+
+    <!-- ══ RÓTULOS ══
+         👉 CAMBIAR: reemplaza el href con la URL real de tu sistema de rótulos -->
+    <a class="card card-rotulos" href="https://script.google.com/macros/s/AKfycbzViSlH5zzxOlOOj3hnqihneVggrIJZPnez6FBH3eZmj9tAzkIpRv0_n3gHL-3EEMRp/exec" target="_blank">
+      <div class="card-icon">🏷️</div>
+      <div class="card-title">Rótulos</div>
+      <div class="card-desc">
+        Impresión de etiquetas · Código de barras · Lotes · Por producto y sucursal
+      </div>
+      <span class="card-badge">Producción</span>
+    </a>
+
+
+
+    <!-- ══ CONSUMO DE GASOLINA ══ -->
+    <a class="card card-gasolina" href="https://script.google.com/macros/s/AKfycbx_fUskQhFaBNoETJ9R0mVmFNh1ldC9h_EfTDdU2z6CgfPisbAg_vlcLL4bh-_wG7x8/exec" target="_blank">
+      <div class="card-icon">⛽</div>
+      <div class="card-title">Consumo de Gasolina</div>
+      <div class="card-desc">
+        Registro por unidad · Litros y $ · Control por ruta y sucursal · Historial mensual
+      </div>
+      <span class="card-badge">Flotilla</span>
+    </a>
+
+  </div>
+</main>
+
+<footer>
+  Centro de Operaciones v9 &nbsp;&middot;&nbsp; Empacadora Superior &nbsp;&middot;&nbsp; <span id="ft-year"></span>
+</footer>
+
+<script>
+  // Fecha en header
+  var dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  var meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  var hoy = new Date();
+  document.getElementById('hdr-fecha').innerHTML =
+    dias[hoy.getDay()] + ', ' + hoy.getDate() + ' de ' + meses[hoy.getMonth()] + ' de ' + hoy.getFullYear();
+  document.getElementById('ft-year').textContent = hoy.getFullYear();
+</script>
+</body>
+</html>
