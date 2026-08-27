@@ -683,7 +683,7 @@ function renderTablaProductos(){
     var cls='';
     if(r.dias_stock>=999 || r.dias_stock>90) cls='alerta-roja';
     else if(r.dias_stock>45) cls='alerta-amarilla';
-    html += '<tr class="'+cls+' drill-row-click" onclick="drillProducto('+JSON.stringify(r.cod)+','+JSON.stringify(r.desc||'')+')" title="Ver quién compra este producto">'+
+    html += '<tr class="'+cls+' drill-row-click" onclick="drillProducto('+JSON.stringify(r.cod)+','+JSON.stringify(r.desc||'')+')" title="Ver análisis: sucursales · tendencia · clientes">'+
       '<td><span class="pill '+r.suc+'">'+r.suc+'</span></td>'+
       '<td>'+r.alm+'</td>'+
       '<td>'+r.cod+'</td>'+
@@ -1240,18 +1240,40 @@ function drillCliente(nombre){
   mostrarDrill('👤 '+nombre+' &nbsp;›&nbsp; Productos comprados', html);
 }
 
-// ── Drill: Producto → quién lo compra ──
+// ── Drill: Producto → análisis completo (sucursales + tendencia + clientes) ──
 function drillProducto(cod, desc){
   var sucs = getSucursales();
   var clis = {};
+  var sucVenta = {}; // suc → {venta, kg}
+
+  // ── 1. Acumular clientes y venta por sucursal ──
   sucs.forEach(function(suc){
+    var sv = {venta:0, kg:0};
     (ERP_DATA.sucursales[suc].ventas_prod||[]).forEach(function(v){
       if(String(v.cod||'').trim() !== String(cod||'').trim()) return;
+      sv.venta += v.importe||0;
+      sv.kg    += v.kg||0;
       var k = String(v.nombre||v.cliente||'').trim().toUpperCase();
       if(!k) return;
       if(!clis[k]) clis[k]={nombre:k, cliente:v.cliente||'', kg:0, importe:0};
       clis[k].kg      += v.kg||0;
       clis[k].importe += v.importe||0;
+    });
+    sucVenta[suc] = sv;
+  });
+
+  // ── 2. Tendencia mensual desde CONCENTRADO ──
+  var mesHist = {}; // mes → venta $
+  sucs.forEach(function(suc){
+    var porMes = (ERP_DATA.sucursales[suc]||{}).ventas_vendedor_por_mes || {};
+    Object.keys(porMes).forEach(function(m){
+      (porMes[m]||[]).forEach(function(vd){
+        (vd.productos||[]).forEach(function(p){
+          if(String(p.cod||'').trim() === String(cod||'').trim()){
+            mesHist[m] = (mesHist[m]||0) + (p.venta||0);
+          }
+        });
+      });
     });
   });
 
@@ -1260,12 +1282,61 @@ function drillProducto(cod, desc){
   var totalImp = rows.reduce(function(s,r){ return s+r.importe; },0);
   var totalKg  = rows.reduce(function(s,r){ return s+r.kg; },0);
 
-  var html;
+  var html = '';
+
+  // ── Bloque 1: Venta por Sucursal ──
+  var COLORES_SUC = {CHIH:'#1e40af', CUAUH:'#15803d', PARRAL:'#b45309'};
+  var sucConVenta = sucs.filter(function(s){ return sucVenta[s] && sucVenta[s].venta>0; });
+  if(sucConVenta.length){
+    var totalSuc = sucConVenta.reduce(function(s,k){ return s+sucVenta[k].venta; },0);
+    html += '<div style="margin-bottom:16px">';
+    html += '<div style="font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📍 Venta por Sucursal — período actual</div>';
+    html += '<div style="display:flex;gap:10px;flex-wrap:wrap">';
+    sucConVenta.forEach(function(suc){
+      var sv  = sucVenta[suc];
+      var pct = totalSuc>0 ? Math.round(sv.venta/totalSuc*100) : 0;
+      var clr = COLORES_SUC[suc]||'#475569';
+      html += '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid '+clr+';border-radius:8px;padding:10px 16px;min-width:150px">';
+      html += '<div style="font-size:11px;font-weight:700;color:'+clr+';margin-bottom:4px">'+suc+'</div>';
+      html += '<div style="font-size:15px;font-weight:800;color:#1e293b">'+fmtMoney(sv.venta)+'</div>';
+      html += '<div style="font-size:11px;color:#64748b">'+fmtNum(sv.kg,1)+' kg &nbsp;·&nbsp; '+pct+'% del total</div>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+  }
+
+  // ── Bloque 2: Tendencia mensual (solo si hay CONCENTRADO cargado) ──
+  var mesesHist = Object.keys(mesHist).sort();
+  if(mesesHist.length > 1){
+    var mShow = mesesHist.slice(-12);
+    var maxV  = Math.max.apply(null, mShow.map(function(m){ return mesHist[m]||0; }).concat([1]));
+    html += '<div style="margin-bottom:16px">';
+    html += '<div style="font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📅 Tendencia mensual (CONCENTRADO · últimos '+mShow.length+' meses)</div>';
+    html += '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px">';
+    html += '<div style="display:flex;align-items:flex-end;gap:3px;height:64px">';
+    mShow.forEach(function(m){
+      var v = mesHist[m]||0;
+      var h = Math.max(4, Math.round(v/maxV*52));
+      var isCurrent = (m === mShow[mShow.length-1]);
+      html += '<div style="display:flex;flex-direction:column;align-items:center;gap:1px;flex:1;min-width:0" title="'+m+': '+fmtMoney(v)+'">';
+      html += '<div style="width:100%;background:'+(isCurrent?'#2563eb':'#93c5fd')+';border-radius:2px 2px 0 0;height:'+h+'px"></div>';
+      html += '<div style="font-size:8px;color:#94a3b8;white-space:nowrap;overflow:hidden;width:100%;text-align:center">'+m.substring(5)+'</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+    // fila de valores mín/máx
+    var minV = Math.min.apply(null, mShow.map(function(m){ return mesHist[m]||0; }));
+    html += '<div style="display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:#94a3b8">';
+    html += '<span>Mín: '+fmtMoney(minV)+'</span><span>Máx: '+fmtMoney(maxV)+'</span>';
+    html += '</div></div></div>';
+  }
+
+  // ── Bloque 3: Clientes ──
   if(!rows.length){
-    html='<div style="text-align:center;padding:20px 0;color:#94a3b8">'+
-      'Sin detalle de clientes para este producto. Carga los archivos de sucursal.</div>';
+    html+='<div style="text-align:center;padding:20px 0;color:#94a3b8">Sin detalle de clientes. Carga los archivos CARGA de cada sucursal.</div>';
   } else {
-    html='<div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">'+
+    html+='<div style="font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">👥 Clientes que lo compran</div>';
+    html+='<div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap">'+
       '<span style="background:#dbeafe;border-radius:6px;padding:3px 12px;font-size:12px;font-weight:600">👥 '+rows.length+' clientes</span>'+
       '<span style="background:#dcfce7;border-radius:6px;padding:3px 12px;font-size:12px;font-weight:600">💵 '+fmtMoney(totalImp)+'</span>'+
       '<span style="background:#fef3c7;border-radius:6px;padding:3px 12px;font-size:12px;font-weight:600">⚖️ '+fmtNum(totalKg,1)+' kg</span>'+
@@ -1301,7 +1372,7 @@ function drillProducto(cod, desc){
       '<td></td>'+
     '</tr></tbody></table></div>';
   }
-  mostrarDrill('📦 '+cod+(desc?' &nbsp;›&nbsp; '+desc:'')+'&nbsp;›&nbsp; Clientes', html);
+  mostrarDrill('📦 '+cod+(desc?' &nbsp;›&nbsp; '+desc:'')+'&nbsp;›&nbsp; Análisis', html);
 }
 
 // ── Cross-filter: clic en fila de sucursal ──
