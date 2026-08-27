@@ -278,6 +278,7 @@ tr.suc-row:hover td{background:#eff6ff !important;}
             <th class="num">VENTA $</th>
             <th class="num">KG</th>
             <th class="num">TRANSAC.</th>
+            <th class="num">TICKET PROM.</th>
             <th class="num">% DEL TOTAL</th>
             <th></th>
           </tr>
@@ -1364,6 +1365,16 @@ function renderComparativaClientes(){
     });
   });
 
+  // ── Venta acumulada mes actual (desde CARGA) ──
+  var cliActMap = {};
+  sucs.forEach(function(suc){
+    (ERP_DATA.sucursales[suc].ventas_cliente||[]).forEach(function(vc){
+      var k2 = String(vc.cliente||'').trim();
+      if(!k2) return;
+      cliActMap[k2] = (cliActMap[k2]||0) + (vc.importe||0);
+    });
+  });
+
   // ── Ordenar y agrupar (máx 12 meses o todos los años) ──
   var esAnual = (typeof cliMesVista!=='undefined' && cliMesVista==='anual');
   var meses;
@@ -1395,7 +1406,7 @@ function renderComparativaClientes(){
   if(!meses.length || !Object.keys(cliMap).length){
     if(thead) thead.innerHTML='';
     if(kpiEl) kpiEl.innerHTML='';
-    el.innerHTML='<tr><td colspan="5" style="text-align:center;padding:32px;color:#94a3b8">'+
+    el.innerHTML='<tr><td colspan="6" style="text-align:center;padding:32px;color:#94a3b8">'+
       '📂 Carga el CONCENTRADO para ver comparativa mensual por cliente</td></tr>';
     return;
   }
@@ -1444,6 +1455,7 @@ function renderComparativaClientes(){
         return '<th class="num" style="min-width:'+(esAnual?'110':'100')+'px;background:#2c5282;color:#e2e8f0;font-weight:700">'+m+'</th>';
       }).join('')+
       '<th class="num" style="min-width:110px;background:#1e3a5f;color:#fff;font-weight:700">TOTAL</th>'+
+      '<th class="num" style="min-width:115px;background:#1e40af;color:#fff;font-weight:700">ACUM MES ACT.</th>'+
       '<th class="num" style="min-width:80px">TEND.</th>'+
     '</tr>';
   }
@@ -1488,6 +1500,7 @@ function renderComparativaClientes(){
       '<td style="font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+d.nombre+'">'+d.nombre+'</td>'+
       cells+
       '<td class="num" style="font-weight:700;background:#eff6ff">'+fmtMoney(total)+'</td>'+
+      '<td class="num" style="font-weight:700;color:#1e40af;background:#e0f2fe">'+fmtMoney(cliActMap[k]||0)+'</td>'+
       '<td class="num" style="font-family:monospace;letter-spacing:1px;font-size:15px">'+spark+'</td>'+
     '</tr>';
   });
@@ -1503,6 +1516,7 @@ function renderComparativaClientes(){
     '<td colspan="2" style="font-weight:700;color:#1e3a5f">📊 TOTAL · '+clientes.length+' clientes</td>'+
     totCells+
     '<td class="num" style="font-weight:800;background:#bfdbfe">'+fmtMoney(totalGral)+'</td>'+
+    '<td class="num" style="font-weight:800;background:#bfdbfe">'+fmtMoney(Object.keys(cliActMap).reduce(function(s,k2){return s+(cliActMap[k2]||0);},0))+'</td>'+
     '<td></td>'+
   '</tr>';
 
@@ -2565,7 +2579,7 @@ function renderVendedores(){
   }
 
   if(todos.length === 0){
-    elTbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:#64748b;padding:24px">Sin datos de vendedores — carga los archivos CARGA de cada sucursal para ver este módulo.</td></tr>';
+    elTbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:#64748b;padding:24px">Sin datos de vendedores — carga los archivos CARGA de cada sucursal para ver este módulo.</td></tr>';
     document.getElementById('vendedor-detalle').style.display='none';
     return;
   }
@@ -2580,6 +2594,7 @@ function renderVendedores(){
     html+='<td class="num">'+fmtMoney(v.venta)+'</td>';
     html+='<td class="num">'+fmtNum(v.kg,1)+' kg</td>';
     html+='<td class="num">'+fmtNum(v.transacciones,0)+'</td>';
+    html+='<td class="num">'+fmtMoney(v.transacciones>0?v.venta/v.transacciones:0)+'</td>';
     html+='<td class="num" style="min-width:140px">'+
       '<div style="display:flex;align-items:center;gap:6px">'+
       '<div style="flex:1;height:6px;background:#e2e8f0;border-radius:3px;min-width:60px">'+
