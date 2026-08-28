@@ -1791,7 +1791,8 @@ function parseMes(rows){
     items.push({
       cod: r[idx['PRODUCTO']], desc: r[idx['DESCRIP']],
       cant: r[idx['CANT']]||0, kg: r[idx['TOTKGS']]||0, venta: r[idx['PRECIO']]||0,
-      costo: r[idx['COSTO']]||0, util: r[idx['UTILIDAD']]||0, util_pct: r[idx['UPORC']]||0
+      costo: r[idx['COSTO']]||0, util: r[idx['UTILIDAD']]||0, util_pct: r[idx['UPORC']]||0,
+      grupo: String(r[idx['GRUPO1']]||r[idx['GRUPO']]||'').trim()
     });
   }
   // Si no se encontró fila TOTAL válida, calcular desde los items individuales
@@ -1871,6 +1872,7 @@ function procesarWorkbook(wb){
         inv_kg: round2(invKg), inv_val: invVal,
         fechac: fechacDate? isoDate(fechacDate): null, dias_antig: diasAntig,
         vpd: vpd, dias_stock: diasStock,
+        grupo: actIt? String(actIt.grupo||'').trim() : (antIt? String(antIt.grupo||'').trim() : ''),
         venta_act: actIt? round2(actIt.venta):0, kg_act: actIt? round2(actIt.kg):0,
         util_act: actIt? round2(actIt.util):0, util_pct_act: actIt? round2(actIt.util_pct):0,
         venta_ant: antIt? round2(antIt.venta):0, kg_ant: antIt? round2(kgAnt):0,
@@ -3138,15 +3140,16 @@ function renderProduccion(){
     var diasAnt = (d.periodo_ant && d.periodo_ant.dias) ? d.periodo_ant.dias : 31;
     (d.ventas_codigo||[]).forEach(function(v){
       var c = String(v.cod).trim();
-      if(!vMapBySuc[suc][c]) vMapBySuc[suc][c]={kg_ant:0,kg_act:0,diasAnt:diasAnt,fechac:null,inv_kg:0};
+      if(!vMapBySuc[suc][c]) vMapBySuc[suc][c]={kg_ant:0,kg_act:0,diasAnt:diasAnt,fechac:null,inv_kg:0,grupo:''};
       vMapBySuc[suc][c].kg_ant += (v.kg_ant||0);
       vMapBySuc[suc][c].kg_act += (v.kg_act||0);
     });
     (d.productos||[]).forEach(function(p){
       var c = String(p.cod).trim();
-      if(!vMapBySuc[suc][c]) vMapBySuc[suc][c]={kg_ant:0,kg_act:0,diasAnt:diasAnt,fechac:null,inv_kg:0};
+      if(!vMapBySuc[suc][c]) vMapBySuc[suc][c]={kg_ant:0,kg_act:0,diasAnt:diasAnt,fechac:null,inv_kg:0,grupo:''};
       vMapBySuc[suc][c].inv_kg = (vMapBySuc[suc][c].inv_kg||0) + (p.inv_kg||0);
       if(p.fechac && !vMapBySuc[suc][c].fechac) vMapBySuc[suc][c].fechac = p.fechac;
+      if(p.grupo && !vMapBySuc[suc][c].grupo) vMapBySuc[suc][c].grupo = p.grupo;
     });
   });
 
@@ -3169,17 +3172,21 @@ function renderProduccion(){
 
       var diasAnt = vm.diasAnt||31;
       var vpd    = (vm.kg_ant>0 && diasAnt>0) ? round2(vm.kg_ant/diasAnt) : 0;
-      var ds     = (vpd>0 && inv_kg>0) ? round2(inv_kg/vpd) : null;
+      // dsVpd: días de cobertura (para estado CRÍTICO/BAJO/OK)
+      var dsVpd  = (vpd>0 && inv_kg>0) ? round2(inv_kg/vpd) : null;
+      // ds: días de antigüedad desde FECHAC (fecha de compra/entrada)
+      var _fc    = vm.fechac ? new Date(vm.fechac) : null;
+      var ds     = (_fc && !isNaN(_fc.getTime())) ? Math.floor((new Date()-_fc)/86400000) : null;
       var invVal = round2(inv_kg*p.costo);
       totalInv  += invVal;
       var estado, color, bg, ord;
       if(inv_kg<=0) {estado='🔴 SIN STOCK';color='#7c0d0d';bg='#fff5f5';ord=0; criticos++;}
       else if(!vpd) {estado='SIN VENTAS';  color='#64748b';bg='#f1f5f9';ord=3;}
-      else if(ds<3) {estado='🔴 CRÍTICO';  color='#b91c1c';bg='#fff5f5';ord=0; criticos++;}
-      else if(ds<7) {estado='🟡 BAJO';     color='#b45309';bg='#fffbeb';ord=1; bajos++;}
-      else          {estado='🟢 OK';       color='#15803d';bg='#f0fdf4';ord=2; okCnt++;}
+      else if(dsVpd<3) {estado='🔴 CRÍTICO';  color='#b91c1c';bg='#fff5f5';ord=0; criticos++;}
+      else if(dsVpd<7) {estado='🟡 BAJO';     color='#b45309';bg='#fffbeb';ord=1; bajos++;}
+      else             {estado='🟢 OK';       color='#15803d';bg='#f0fdf4';ord=2; okCnt++;}
 
-      rows.push({p:p,suc:suc,vm:vm,vpd:vpd,ds:ds,invVal:invVal,inv_kg:inv_kg,estado:estado,color:color,bg:bg,ord:ord});
+      rows.push({p:p,suc:suc,vm:vm,vpd:vpd,ds:ds,dsVpd:dsVpd,invVal:invVal,inv_kg:inv_kg,estado:estado,color:color,bg:bg,ord:ord});
     });
   });
 
@@ -3210,12 +3217,14 @@ function renderProduccion(){
   var tHtml = rows.length ? rows.map(function(row){
     var p = row.p, vm = row.vm;
     var vpdStr  = row.vpd>0 ? round2(row.vpd).toFixed(2)+' kg/d' : '—';
-    var dStr    = row.ds!=null ? Math.round(row.ds)+' días' : '—';
+    var dStr    = row.ds!=null ? row.ds+' días' : '—';
     var fechac  = vm.fechac ? vm.fechac : '—';
     var kgActStr= (vm.kg_act>0) ? round2(vm.kg_act).toFixed(1)+' kg' : '—';
+    var grupoStr= vm.grupo || '—';
     return '<tr style="background:'+row.bg+'">'+
       '<td style="font-weight:600">'+p.cod+'</td>'+
       '<td>'+p.desc+'</td>'+
+      '<td style="font-size:11px;color:#64748b;max-width:100px">'+grupoStr+'</td>'+
       '<td style="font-weight:700;font-size:12px;color:#1e3a5f;background:rgba(30,58,95,.06);text-align:center">'+row.suc+'</td>'+
       '<td class="num">'+fmtMoney(p.costo)+'</td>'+
       '<td class="num">'+round2(row.inv_kg).toFixed(1)+'</td>'+
@@ -3227,7 +3236,7 @@ function renderProduccion(){
       '<td><span style="font-weight:700;font-size:12px;color:'+row.color+'">'+row.estado+'</span></td>'+
       '</tr>';
   }).join('') :
-    '<tr><td colspan="11" style="text-align:center;color:#94a3b8;padding:24px">'+
+    '<tr><td colspan="12" style="text-align:center;color:#94a3b8;padding:24px">'+
     (buscar?'Sin coincidencias para "'+buscar+'"':'Sin datos · carga los archivos de cada sucursal')+
     '</td></tr>';
 
@@ -3238,13 +3247,13 @@ function renderProduccion(){
     '<div class="info">VPD calculado con kg vendidos del mes anterior (CARGA)'+actTs+'</div></div>'+
     '<div class="tabla-wrap"><table>'+
     '<thead><tr>'+
-    '<th>COD</th><th>DESCRIPCIÓN</th><th style="text-align:center">SUC</th>'+
+    '<th>COD</th><th>DESCRIPCIÓN</th><th>GRUPO</th><th style="text-align:center">SUC</th>'+
     '<th class="num">COSTO $/KG</th>'+
     '<th class="num">INV KG</th>'+
     '<th class="num">VALOR INV $</th>'+
     '<th class="num">VENTA MES ACT (KG)</th>'+
     '<th class="num">KG/DÍA (VPD)</th>'+
-    '<th class="num">DÍAS STOCK</th>'+
+    '<th class="num">DÍAS ANTIGÜEDAD</th>'+
     '<th>FECHA COMPRA</th>'+
     '<th>ESTADO</th>'+
     '</tr></thead>'+
