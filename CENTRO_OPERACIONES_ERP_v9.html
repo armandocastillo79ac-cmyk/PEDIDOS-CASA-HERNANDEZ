@@ -1872,7 +1872,7 @@ function procesarWorkbook(wb){
         inv_kg: round2(invKg), inv_val: invVal,
         fechac: fechacDate? isoDate(fechacDate): null, dias_antig: diasAntig,
         vpd: vpd, dias_stock: diasStock,
-        grupo: actIt? String(actIt.grupo||'').trim() : (antIt? String(antIt.grupo||'').trim() : ''),
+        grupo: (iidx['GRUPO']!=null ? String(r[iidx['GRUPO']]||'').trim() : (iidx['GRUPO1']!=null ? String(r[iidx['GRUPO1']]||'').trim() : (actIt? String(actIt.grupo||'').trim() : (antIt? String(antIt.grupo||'').trim() : '')))),
         venta_act: actIt? round2(actIt.venta):0, kg_act: actIt? round2(actIt.kg):0,
         util_act: actIt? round2(actIt.util):0, util_pct_act: actIt? round2(actIt.util_pct):0,
         venta_ant: antIt? round2(antIt.venta):0, kg_ant: antIt? round2(kgAnt):0,
@@ -3104,7 +3104,8 @@ function cargarProduccion(input){
           cod: String(cod).trim(),
           desc: String(r[idx['DESCRIP']]||'').trim(),
           costo: round2(Number(r[idx['COSTO']])||0),
-          inv_kg: round2(Math.max(invKg, 0))
+          inv_kg: round2(Math.max(invKg, 0)),
+          grupo: String(r[idx['GRUPO']]||r[idx['GRUPO1']]||r[idx['AGRUPACION']]||'').trim()
         });
       }
       PRODUCCION_DATA.catalogo = catalogo;
@@ -3220,7 +3221,7 @@ function renderProduccion(){
     var dStr    = row.ds!=null ? row.ds+' días' : '—';
     var fechac  = vm.fechac ? vm.fechac : '—';
     var kgActStr= (vm.kg_act>0) ? round2(vm.kg_act).toFixed(1)+' kg' : '—';
-    var grupoStr= vm.grupo || '—';
+    var grupoStr= (p.grupo||vm.grupo||'').trim() || '—';
     return '<tr style="background:'+row.bg+'">'+
       '<td style="font-weight:600">'+p.cod+'</td>'+
       '<td>'+p.desc+'</td>'+
